@@ -67,6 +67,28 @@ jobs:
         with:
           # Upload entire repository
           path: './website/dist'
+      - name: Report deploy start to Rollouts
+        id: rollouts
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          CHANGE_MONITOR_ENV: github-pages
+          CHANGE_MONITOR_SERVICE: website
+          DEPLOY_VERSION: ${{ github.sha }}
+          CHANGE_MONITOR_ACTOR: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          bash .github/scripts/rollouts-reporter.sh bootstrap
+          bash .github/scripts/rollouts-reporter.sh start
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      - name: Report deploy finish to Rollouts
+        if: always()
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          CHANGE_MONITOR_ENV: github-pages
+          CHANGE_MONITOR_SERVICE: website
+          DEPLOY_VERSION: ${{ github.sha }}
+          CHANGE_MONITOR_ACTOR: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ROLLOUTS_DEPLOYMENT: ${{ steps.rollouts.outputs.deployment }}
+          ROLLOUTS_OUTCOME: ${{ steps.deployment.outcome }}
+        run: bash .github/scripts/rollouts-reporter.sh finish
